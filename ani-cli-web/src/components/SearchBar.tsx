@@ -1,12 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../store';
 import { searchAnime } from '../lib/api';
+
+const MIN_QUERY_LENGTH = 2;
 
 export function SearchBar() {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
+  const seqRef = useRef(0);
 
   const {
+    mode,
     setSearchResults,
     setIsSearching,
     setSearchError,
@@ -23,21 +27,24 @@ export function SearchBar() {
   }, [query]);
 
   useEffect(() => {
-    if (!debouncedQuery.trim()) {
-      setSearchQuery('');
+    const term = debouncedQuery.trim();
+    const seq = ++seqRef.current;
+    setSearchQuery(term);
+
+    if (term.length < MIN_QUERY_LENGTH) {
       setSearchResults([]);
       setSearchError(null);
+      setIsSearching(false);
       return;
     }
 
-    const doSearch = async () => {
-      setSearchQuery(debouncedQuery);
-      setIsSearching(true);
-      setSearchError(null);
-      setSelectedResult(null);
+    setIsSearching(true);
+    setSearchError(null);
+    setSelectedResult(null);
 
-      try {
-        const response = await searchAnime(debouncedQuery);
+    searchAnime(term, mode)
+      .then((response) => {
+        if (seq !== seqRef.current) return;
 
         if (response.status === 'error') {
           setSearchError(response.error || 'Search failed');
@@ -48,19 +55,20 @@ export function SearchBar() {
         } else {
           setSearchResults(response.results);
         }
-      } catch (err) {
+      })
+      .catch(() => {
+        if (seq !== seqRef.current) return;
         setSearchError('Failed to search');
         setSearchResults([]);
-      } finally {
-        setIsSearching(false);
-      }
-    };
-
-    doSearch();
-  }, [debouncedQuery, setSearchResults, setIsSearching, setSearchError, setSelectedResult, setSearchQuery]);
+      })
+      .finally(() => {
+        if (seq === seqRef.current) setIsSearching(false);
+      });
+  }, [debouncedQuery, mode, setSearchResults, setIsSearching, setSearchError, setSelectedResult, setSearchQuery]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setDebouncedQuery(query);
   };
 
   return (
@@ -74,11 +82,12 @@ export function SearchBar() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search anime title..."
-          className="w-full rounded-xl border border-transparent bg-neutral-950/80 py-4 pl-12 pr-14 text-base text-white placeholder-neutral-500 outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-500/25 sm:text-lg"
+          aria-label="Search anime title"
+          className="w-full rounded-xl border border-transparent bg-neutral-950/80 py-4 pl-12 pr-14 text-base text-white placeholder-neutral-500 outline-none transition-all focus:border-orange-400 focus:ring-2 focus:ring-orange-500/25 sm:text-lg"
         />
         {isSearching && (
           <div className="absolute right-6 top-1/2 -translate-y-1/2">
-            <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            <div className="w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
           </div>
         )}
       </div>

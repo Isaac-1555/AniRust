@@ -4,6 +4,8 @@ use std::path::PathBuf;
 use std::process::Command;
 use tauri::{path::BaseDirectory, AppHandle, Manager};
 
+mod proxy;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SearchResult {
     pub index: i32,
@@ -24,6 +26,15 @@ pub struct SearchResponse {
 pub struct PlayResult {
     pub status: String,
     pub url: Option<String>,
+    pub subtitle_url: Option<String>,
+    pub referrer: Option<String>,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EpisodesResponse {
+    pub status: String,
+    pub episodes: Vec<String>,
     pub error: Option<String>,
 }
 
@@ -91,6 +102,7 @@ fn run_ani_cli(
     };
 
     command.args(args);
+    command.env("ANI_CLI_PLAYER", "debug");
     for (key, value) in envs {
         command.env(key, value);
     }
@@ -99,7 +111,11 @@ fn run_ani_cli(
 }
 
 #[tauri::command]
-async fn search_anime(app: AppHandle, query: String) -> Result<SearchResponse, String> {
+async fn search_anime(
+    app: AppHandle,
+    query: String,
+    mode: Option<String>,
+) -> Result<SearchResponse, String> {
     let query = sanitize_input(&query);
     if query.is_empty() {
         return Ok(SearchResponse {
@@ -112,11 +128,12 @@ async fn search_anime(app: AppHandle, query: String) -> Result<SearchResponse, S
 
     info!("Searching for: {}", query);
 
-    let output = run_ani_cli(
-        &app,
-        &["--search-only".to_string(), query.clone()],
-        &[("ANI_CLI_LOG", "0")],
-    );
+    let mut args = vec!["--search-only".to_string(), query.clone()];
+    if mode.as_deref() == Some("dub") {
+        args.push("--dub".to_string());
+    }
+
+    let output = run_ani_cli(&app, &args, &[("ANI_CLI_LOG", "0")]);
 
     match output {
         Ok(out) => {
@@ -288,6 +305,8 @@ async fn play_anime(
         return Ok(PlayResult {
             status: "error".to_string(),
             url: None,
+            subtitle_url: None,
+            referrer: None,
             error: Some("Missing anime id".to_string()),
         });
     }
@@ -313,6 +332,8 @@ async fn play_anime(
         args.push("--dub".to_string());
     }
 
+    let proxy = app.state::<proxy::Proxy>();
+
     let output = run_ani_cli(
         &app,
         &args,
@@ -328,10 +349,18 @@ async fn play_anime(
             let stdout = String::from_utf8_lossy(&out.stdout);
             let stderr = String::from_utf8_lossy(&out.stderr);
 
-            info!("Play output: {}", stdout);
+            info!("Play output: {} chars", stdout.len());
 
-            let url = extract_stream_url(&stdout, &stderr);
-            let has_url = url.is_some();
+            let (raw_url, subtitle, referrer) = parse_play_output(&stdout);
+            let has_url = raw_url.is_some();
+
+            let url = raw_url
+                .as_deref()
+                .map(|value| proxy.proxify(value, referrer.as_deref()));
+            let subtitle_url = subtitle
+                .as_deref()
+                .map(|value| proxy.proxify(value, referrer.as_deref()));
+
             let error = sanitize_output(&stderr).trim().to_string();
 
             Ok(PlayResult {
@@ -341,6 +370,8 @@ async fn play_anime(
                     "error".to_string()
                 },
                 url,
+                subtitle_url,
+                referrer,
                 error: if has_url {
                     None
                 } else {
@@ -357,10 +388,34 @@ async fn play_anime(
             Ok(PlayResult {
                 status: "error".to_string(),
                 url: None,
+                subtitle_url: None,
+                referrer: None,
                 error: Some(format!("Failed to execute bundled ani-cli: {}", e)),
             })
         }
     }
+}
+
+fn parse_play_output(stdout: &str) -> (Option<String>, Option<String>, Option<String>) {
+    let sanitized = sanitize_output(stdout);
+    let mut subtitle = None;
+    let mut referrer = None;
+
+    for line in sanitized.lines() {
+        let line = line.trim();
+        if let Some(value) = line.strip_prefix("ANI_SUBS=") {
+            if !value.trim().is_empty() {
+                subtitle = Some(value.trim().to_string());
+            }
+        } else if let Some(value) = line.strip_prefix("ANI_REFR=") {
+            if !value.trim().is_empty() {
+                referrer = Some(value.trim().to_string());
+            }
+        }
+    }
+
+    let url = extract_stream_url(&sanitized, "");
+    (url, subtitle, referrer)
 }
 
 fn extract_stream_url(stdout: &str, stderr: &str) -> Option<String> {
@@ -368,6 +423,10 @@ fn extract_stream_url(stdout: &str, stderr: &str) -> Option<String> {
 
     for line in combined.lines() {
         let line = line.trim().trim_matches(|c| c == '"' || c == '\'');
+
+        if line.starts_with("ANI_SUBS=") || line.starts_with("ANI_REFR=") {
+            continue;
+        }
 
         if line.starts_with("https://") || line.starts_with("http://") {
             return Some(line.to_string());
@@ -387,6 +446,77 @@ fn extract_stream_url(stdout: &str, stderr: &str) -> Option<String> {
     }
 
     None
+}
+
+#[tauri::command]
+async fn get_episodes(
+    app: AppHandle,
+    anime_id: String,
+    mode: Option<String>,
+) -> Result<EpisodesResponse, String> {
+    let anime_id = sanitize_input(&anime_id);
+    if anime_id.is_empty() {
+        return Ok(EpisodesResponse {
+            status: "error".to_string(),
+            episodes: vec![],
+            error: Some("Missing anime id".to_string()),
+        });
+    }
+
+    let mut args = vec![
+        "--episodes-only".to_string(),
+        "--anime-id".to_string(),
+        anime_id.clone(),
+    ];
+    if mode.as_deref() == Some("dub") {
+        args.push("--dub".to_string());
+    }
+
+    let output = run_ani_cli(&app, &args, &[("ANI_CLI_LOG", "0")]);
+
+    match output {
+        Ok(out) => {
+            let stdout = String::from_utf8_lossy(&out.stdout);
+            let stderr = String::from_utf8_lossy(&out.stderr);
+            let episodes = parse_episodes_output(&stdout);
+
+            if episodes.is_empty() {
+                Ok(EpisodesResponse {
+                    status: "empty".to_string(),
+                    episodes,
+                    error: Some(sanitize_output(&stderr).trim().to_string()),
+                })
+            } else {
+                Ok(EpisodesResponse {
+                    status: "success".to_string(),
+                    episodes,
+                    error: None,
+                })
+            }
+        }
+        Err(e) => Ok(EpisodesResponse {
+            status: "error".to_string(),
+            episodes: vec![],
+            error: Some(format!("Failed to execute bundled ani-cli: {}", e)),
+        }),
+    }
+}
+
+fn parse_episodes_output(stdout: &str) -> Vec<String> {
+    let sanitized = sanitize_output(stdout);
+    let mut episodes = Vec::new();
+
+    for line in sanitized.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.len() > 20 {
+            continue;
+        }
+        if line.parse::<f32>().is_ok() {
+            episodes.push(line.to_string());
+        }
+    }
+
+    episodes
 }
 
 #[tauri::command]
@@ -427,15 +557,20 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             search_anime,
             play_anime,
+            get_episodes,
             check_ani_cli,
             get_cli_version
         ])
-        .setup(|_app| {
+        .setup(|app| {
+            let proxy = tauri::async_runtime::block_on(proxy::Proxy::start())
+                .map_err(|e| format!("failed to start stream proxy: {e}"))?;
+            app.manage(proxy);
+
             info!("App setup complete");
 
             #[cfg(debug_assertions)]
             {
-                let window = _app.get_webview_window("main").unwrap();
+                let window = app.get_webview_window("main").unwrap();
                 window.open_devtools();
             }
 
@@ -443,4 +578,83 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn strips_ansi_sequences() {
+        assert_eq!(sanitize_output("\x1b[1;31mhello\x1b[0m"), "hello");
+        assert_eq!(sanitize_output("a\x1b[2K\rb"), "a\rb");
+    }
+
+    #[test]
+    fn splits_episode_count_from_title() {
+        assert_eq!(
+            split_title_metadata("Sousou no Frieren (28 episodes)"),
+            (
+                "Sousou no Frieren".to_string(),
+                "Sousou no Frieren (28 episodes)".to_string()
+            )
+        );
+        assert_eq!(
+            split_title_metadata("Naruto"),
+            ("Naruto".to_string(), "Naruto".to_string())
+        );
+    }
+
+    #[test]
+    fn parses_search_output_lines() {
+        let raw = "foo123\tSousou no Frieren (28 episodes)\nbar456\tNaruto (220 episodes)\n";
+        let results = parse_search_output(raw);
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].id, "foo123");
+        assert_eq!(results[0].title, "Sousou no Frieren");
+        assert_eq!(results[0].index, 1);
+        assert_eq!(results[1].id, "bar456");
+        assert_eq!(results[1].index, 2);
+    }
+
+    #[test]
+    fn ignores_progress_lines() {
+        let raw = "Checking dependencies...\nid1\tShow One (12 episodes)\n";
+        let results = parse_search_output(raw);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].id, "id1");
+    }
+
+    #[test]
+    fn parses_episode_list() {
+        assert_eq!(
+            parse_episodes_output("1\n2\n3\n10\n"),
+            vec!["1", "2", "3", "10"]
+        );
+        assert!(parse_episodes_output("no episodes").is_empty());
+    }
+
+    #[test]
+    fn parses_play_output_with_metadata() {
+        let raw = "https://cdn.example/stream.m3u8\nANI_SUBS=https://cdn.example/en.vtt\nANI_REFR=https://allmanga.to\n";
+        let (url, subs, refr) = parse_play_output(raw);
+        assert_eq!(url.as_deref(), Some("https://cdn.example/stream.m3u8"));
+        assert_eq!(subs.as_deref(), Some("https://cdn.example/en.vtt"));
+        assert_eq!(refr.as_deref(), Some("https://allmanga.to"));
+    }
+
+    #[test]
+    fn play_output_without_metadata() {
+        let raw = "https://cdn.example/video.mp4\n";
+        let (url, subs, refr) = parse_play_output(raw);
+        assert_eq!(url.as_deref(), Some("https://cdn.example/video.mp4"));
+        assert!(subs.is_none());
+        assert!(refr.is_none());
+    }
+
+    #[test]
+    fn sanitizes_shell_metacharacters() {
+        assert_eq!(sanitize_input("frieren; rm -rf /"), "frieren rm -rf ");
+        assert_eq!(sanitize_input("Re:Zero - Starting Life!"), "Re:Zero - Starting Life");
+    }
 }

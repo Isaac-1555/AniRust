@@ -1,8 +1,8 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { SearchResponse, PlayResult } from './types';
+import type { SearchResponse, PlayResult, EpisodesResponse } from './types';
 
-export async function searchAnime(query: string): Promise<SearchResponse> {
-  return await invoke<SearchResponse>('search_anime', { query });
+export async function searchAnime(query: string, mode: string): Promise<SearchResponse> {
+  return await invoke<SearchResponse>('search_anime', { query, mode });
 }
 
 export async function playAnime(
@@ -19,6 +19,10 @@ export async function playAnime(
     quality,
     mode
   });
+}
+
+export async function getEpisodes(animeId: string, mode: string): Promise<EpisodesResponse> {
+  return await invoke<EpisodesResponse>('get_episodes', { animeId, mode });
 }
 
 export async function checkAniCli(): Promise<boolean> {

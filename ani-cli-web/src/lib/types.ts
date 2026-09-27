@@ -13,13 +13,22 @@ export interface SearchResponse {
 }
 
 export interface PlayResult {
-status: string;
-url?: string;
-error?: string;
+  status: string;
+  url?: string;
+  subtitle_url?: string;
+  referrer?: string;
+  error?: string;
+}
+
+export interface EpisodesResponse {
+  status: string;
+  episodes: string[];
+  error?: string;
 }
 
 export interface StreamInfo {
     url: string;
+    subtitleUrl?: string;
     title: string;
 }
 

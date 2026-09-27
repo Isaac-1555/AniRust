@@ -20,6 +20,8 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  background: radial-gradient(circle at top, #2a2118 0%, #14110e 40%, #050505 100%);
+  background-attachment: fixed;
 }
 
 #root {

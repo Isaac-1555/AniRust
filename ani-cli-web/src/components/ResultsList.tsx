@@ -1,9 +1,24 @@
+import { useEffect, useState } from 'react';
 import { useAppStore } from '../store';
 
 export function ResultsList() {
-  const { searchResults, selectedResult, setSelectedResult, searchError, isSearching, searchQuery } = useAppStore();
+  const {
+    searchResults,
+    selectedResult,
+    setSelectedResult,
+    searchError,
+    isSearching,
+    searchQuery
+  } = useAppStore();
+  const [activeIndex, setActiveIndex] = useState(-1);
 
-  if (!searchQuery.trim() && searchResults.length === 0) {
+  useEffect(() => {
+    setActiveIndex(-1);
+  }, [searchResults]);
+
+  const showSkeleton = isSearching;
+
+  if (!showSkeleton && !searchQuery.trim() && searchResults.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center rounded-3xl border border-dashed border-white/10 bg-white/[0.03] p-10 text-neutral-500">
         <div className="text-center">
@@ -14,12 +29,19 @@ export function ResultsList() {
     );
   }
 
-  if (isSearching && searchResults.length === 0) {
+  if (showSkeleton && searchResults.length === 0) {
     return (
-      <div className="flex flex-1 items-center justify-center rounded-3xl border border-white/10 bg-white/[0.03] text-neutral-500">
-        <div className="text-center">
-          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p>Searching...</p>
+      <div className="min-h-0 flex-1 overflow-hidden rounded-3xl border border-white/10 bg-black/20 p-3 shadow-2xl shadow-black/20 backdrop-blur">
+        <div className="grid gap-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+              <div className="h-9 w-9 shrink-0 animate-pulse rounded-xl bg-white/10" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-2/3 animate-pulse rounded bg-white/10" />
+                <div className="h-3 w-1/3 animate-pulse rounded bg-white/[0.07]" />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -47,25 +69,41 @@ export function ResultsList() {
     );
   }
 
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setActiveIndex((index) => Math.min(index + 1, searchResults.length - 1));
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setActiveIndex((index) => Math.max(index - 1, 0));
+    } else if (event.key === 'Enter' && activeIndex >= 0) {
+      event.preventDefault();
+      setSelectedResult(searchResults[activeIndex]);
+    }
+  };
+
   return (
     <div className="min-h-0 flex-1 overflow-y-auto rounded-3xl border border-white/10 bg-black/20 p-3 shadow-2xl shadow-black/20 backdrop-blur">
       <div className="mb-3 flex items-center justify-between px-2 text-sm text-neutral-400">
         <span>{searchResults.length} result{searchResults.length === 1 ? '' : 's'}</span>
-        <span>Click a title to choose episode and quality</span>
+        <span className="hidden sm:inline">Arrow keys to move · Enter to open</span>
       </div>
-      <div className="grid gap-3">
-        {searchResults.map((result) => (
+      <div className="grid gap-3" role="listbox" tabIndex={0} onKeyDown={handleKeyDown} aria-label="Search results">
+        {searchResults.map((result, index) => (
           <button
             key={result.id}
+            role="option"
+            aria-selected={selectedResult?.id === result.id || activeIndex === index}
             onClick={() => setSelectedResult(result)}
+            onMouseEnter={() => setActiveIndex(index)}
             className={`group w-full rounded-2xl border p-4 text-left transition-all ${
-              selectedResult?.id === result.id
-                ? 'border-blue-400 bg-blue-500/20 text-white shadow-lg shadow-blue-950/30'
-                : 'border-white/10 bg-white/[0.04] text-neutral-200 hover:border-blue-400/50 hover:bg-white/[0.08]'
+              selectedResult?.id === result.id || activeIndex === index
+                ? 'border-orange-400 bg-orange-500/20 text-white shadow-lg shadow-orange-950/30'
+                : 'border-white/10 bg-white/[0.04] text-neutral-200 hover:border-orange-400/50 hover:bg-white/[0.08]'
             }`}
           >
             <div className="flex items-center gap-3">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-neutral-950 text-sm font-semibold text-neutral-400 ring-1 ring-white/10 group-hover:text-blue-200">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-neutral-950 text-sm font-semibold text-neutral-400 ring-1 ring-white/10 group-hover:text-orange-200">
                 {result.index}
               </span>
               <div className="min-w-0">

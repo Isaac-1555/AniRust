@@ -3,11 +3,12 @@ import Hls from 'hls.js';
 
 interface VideoPlayerProps {
   src: string;
+  subtitleUrl?: string;
   title: string;
   onClose: () => void;
 }
 
-export function VideoPlayer({ src, title, onClose }: VideoPlayerProps) {
+export function VideoPlayer({ src, subtitleUrl, title, onClose }: VideoPlayerProps) {
 const videoRef = useRef<HTMLVideoElement>(null!);
 const containerRef = useRef<HTMLDivElement>(null!);
   const hlsRef = useRef<Hls | null>(null);
@@ -94,12 +95,23 @@ const containerRef = useRef<HTMLDivElement>(null!);
           controls
           autoPlay
           playsInline
-        />
+          crossOrigin="anonymous"
+        >
+          {subtitleUrl && (
+            <track
+              kind="subtitles"
+              src={subtitleUrl}
+              srcLang="en"
+              label="English"
+              default
+            />
+          )}
+        </video>
 
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/60">
             <div className="flex flex-col items-center gap-3">
-              <div className="w-10 h-10 border-3 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
               <p className="text-white text-sm">Loading stream...</p>
             </div>
           </div>

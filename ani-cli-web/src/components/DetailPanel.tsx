@@ -1,5 +1,16 @@
+import { useEffect, useState } from 'react';
 import { useAppStore } from '../store';
-import { playAnime } from '../lib/api';
+import { playAnime, getEpisodes } from '../lib/api';
+import { toast } from '../lib/toast';
+
+const QUALITIES = [
+  { value: 'best', label: 'Best available' },
+  { value: '1080', label: '1080p' },
+  { value: '720', label: '720p' },
+  { value: '480', label: '480p' },
+  { value: '360', label: '360p' },
+  { value: 'worst', label: 'Worst' },
+];
 
 export function DetailPanel() {
   const {
@@ -17,23 +28,69 @@ export function DetailPanel() {
     setStreamInfo
   } = useAppStore();
 
+  const [episodes, setEpisodes] = useState<number[]>([]);
+  const [episodesLoading, setEpisodesLoading] = useState(false);
+  const [episodesError, setEpisodesError] = useState<string | null>(null);
+
+  const resultId = selectedResult?.id;
+
+  useEffect(() => {
+    if (!resultId) {
+      setEpisodes([]);
+      setEpisodesError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setEpisodesLoading(true);
+    setEpisodesError(null);
+
+    getEpisodes(resultId, mode)
+      .then((response) => {
+        if (cancelled) return;
+        const parsed = response.episodes
+          .map((value) => Number.parseInt(value, 10))
+          .filter((value) => Number.isFinite(value));
+        setEpisodes(parsed);
+        if (parsed.length > 0 && !parsed.includes(episode)) {
+          setEpisode(parsed[0]);
+        }
+        if (parsed.length === 0) {
+          setEpisodesError(response.error || 'No episodes found');
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setEpisodesError('Failed to load episodes');
+      })
+      .finally(() => {
+        if (!cancelled) setEpisodesLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [resultId, mode]);
+
   if (!selectedResult) {
     return null;
   }
-
 
   const handlePlay = async () => {
     if (isPlaying) return;
 
     setIsPlaying(true);
+    toast.info('Resolving stream...');
 
     try {
       const result = await playAnime(selectedResult.id, selectedResult.title, episode, quality, mode);
 
       if (result.status === 'success' && result.url) {
-        setStreamInfo({ url: result.url, title: selectedResult.title });
+        setStreamInfo({
+          url: result.url,
+          subtitleUrl: result.subtitle_url,
+          title: selectedResult.title
+        });
         addToHistory({
-          id: Date.now(),
           anime_id: selectedResult.id,
           title: selectedResult.title,
           episode,
@@ -43,10 +100,10 @@ export function DetailPanel() {
         });
         setSelectedResult(null);
       } else {
-        alert(result.error || 'Failed to get stream URL');
+        toast.error(result.error || 'Failed to get stream URL');
       }
-    } catch (err) {
-      alert('Failed to play');
+    } catch {
+      toast.error('Failed to play');
     } finally {
       setIsPlaying(false);
     }
@@ -67,6 +124,7 @@ export function DetailPanel() {
           </div>
           <button
             onClick={() => setSelectedResult(null)}
+            aria-label="Close"
             className="rounded-xl p-2 text-neutral-400 transition-colors hover:bg-white/10 hover:text-white"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -78,13 +136,41 @@ export function DetailPanel() {
         <div className="space-y-4">
           <div>
             <label className="block text-sm text-neutral-400 mb-2">Episode</label>
-            <input
-              type="number"
-              min="1"
-              value={episode}
-              onChange={(e) => setEpisode(Math.max(1, parseInt(e.target.value) || 1))}
-              className="w-full rounded-xl border border-white/10 bg-white/[0.06] px-3 py-3 text-white outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-500/25"
-            />
+            {episodesLoading ? (
+              <div className="h-[52px] animate-pulse rounded-xl border border-white/10 bg-white/[0.04]" />
+            ) : episodes.length > 0 ? (
+              <div className="max-h-40 overflow-y-auto rounded-xl border border-white/10 bg-white/[0.04] p-2">
+                <div className="grid grid-cols-5 gap-2">
+                  {episodes.map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setEpisode(value)}
+                      className={`rounded-lg py-2 text-sm font-medium transition-colors ${
+                        episode === value
+                          ? 'bg-orange-600 text-white'
+                          : 'bg-white/[0.04] text-neutral-300 hover:bg-white/[0.1]'
+                      }`}
+                    >
+                      {value}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div>
+                <input
+                  type="number"
+                  min="1"
+                  value={episode}
+                  onChange={(e) => setEpisode(Math.max(1, Number.parseInt(e.target.value, 10) || 1))}
+                  className="w-full rounded-xl border border-white/10 bg-white/[0.06] px-3 py-3 text-white outline-none transition-all focus:border-orange-400 focus:ring-2 focus:ring-orange-500/25"
+                />
+                {episodesError && (
+                  <p className="mt-2 text-xs text-amber-300/80">{episodesError}. Enter an episode manually.</p>
+                )}
+              </div>
+            )}
           </div>
 
           <div>
@@ -92,41 +178,33 @@ export function DetailPanel() {
             <select
               value={quality}
               onChange={(e) => setQuality(e.target.value)}
-              className="w-full cursor-pointer rounded-xl border border-white/10 bg-white/[0.06] px-3 py-3 text-white outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-500/25"
+              className="w-full cursor-pointer rounded-xl border border-white/10 bg-white/[0.06] px-3 py-3 text-white outline-none transition-all focus:border-orange-400 focus:ring-2 focus:ring-orange-500/25"
             >
-              <option value="best">Best</option>
-              <option value="1080">1080p</option>
-              <option value="720">720p</option>
-              <option value="480">480p</option>
-              <option value="worst">Worst</option>
+              {QUALITIES.map((option) => (
+                <option key={option.value} value={option.value} className="bg-neutral-900">
+                  {option.label}
+                </option>
+              ))}
             </select>
           </div>
 
           <div>
             <label className="block text-sm text-neutral-400 mb-3">Mode</label>
             <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setMode('sub')}
-                className={`flex-1 px-4 py-2.5 rounded-lg font-medium transition-all ${
-                  mode === 'sub'
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-950/30'
-                    : 'bg-white/[0.06] text-neutral-300 hover:bg-white/[0.1]'
-                }`}
-              >
-                Sub
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode('dub')}
-                className={`flex-1 px-4 py-2.5 rounded-lg font-medium transition-all ${
-                  mode === 'dub'
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-950/30'
-                    : 'bg-white/[0.06] text-neutral-300 hover:bg-white/[0.1]'
-                }`}
-              >
-                Dub
-              </button>
+              {(['sub', 'dub'] as const).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setMode(value)}
+                  className={`flex-1 px-4 py-2.5 rounded-lg font-medium capitalize transition-all ${
+                    mode === value
+                      ? 'bg-orange-600 text-white shadow-lg shadow-orange-950/30'
+                      : 'bg-white/[0.06] text-neutral-300 hover:bg-white/[0.1]'
+                  }`}
+                >
+                  {value}
+                </button>
+              ))}
             </div>
           </div>
         </div>
@@ -141,7 +219,7 @@ export function DetailPanel() {
           <button
             onClick={handlePlay}
             disabled={isPlaying}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white transition-all hover:bg-blue-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 py-3 font-semibold text-white transition-all hover:bg-orange-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isPlaying ? (
               <>
