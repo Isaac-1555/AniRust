@@ -8,6 +8,7 @@ export function SearchBar() {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const seqRef = useRef(0);
+  const prevTermRef = useRef<string | null>(null);
 
   const {
     mode,
@@ -31,6 +32,9 @@ export function SearchBar() {
     const seq = ++seqRef.current;
     setSearchQuery(term);
 
+    const termChanged = prevTermRef.current !== term;
+    prevTermRef.current = term;
+
     if (term.length < MIN_QUERY_LENGTH) {
       setSearchResults([]);
       setSearchError(null);
@@ -40,7 +44,7 @@ export function SearchBar() {
 
     setIsSearching(true);
     setSearchError(null);
-    setSelectedResult(null);
+    if (termChanged) setSelectedResult(null);
 
     searchAnime(term, mode)
       .then((response) => {

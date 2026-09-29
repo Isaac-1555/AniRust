@@ -86,7 +86,6 @@ export function ResultsList() {
     <div className="min-h-0 flex-1 overflow-y-auto rounded-3xl border border-white/10 bg-surface/55 p-3 shadow-2xl shadow-black/20 backdrop-blur">
       <div className="mb-3 flex items-center justify-between px-2 text-sm text-neutral-400">
         <span>{searchResults.length} result{searchResults.length === 1 ? '' : 's'}</span>
-        <span className="hidden sm:inline">Arrow keys to move · Enter to open</span>
       </div>
       <div className="grid gap-3" role="listbox" tabIndex={0} onKeyDown={handleKeyDown} aria-label="Search results">
         {searchResults.map((result, index) => (
