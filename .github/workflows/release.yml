@@ -1,0 +1,80 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  publish-tauri:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            args: '--target aarch64-apple-darwin'
+          - platform: macos-latest
+            args: '--target x86_64-apple-darwin'
+          - platform: ubuntu-22.04
+            args: ''
+          - platform: windows-latest
+            args: ''
+
+    runs-on: ${{ matrix.platform }}
+    defaults:
+      run:
+        working-directory: ani-cli-web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: ani-cli-web/package-lock.json
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './ani-cli-web/src-tauri -> target'
+
+      - name: install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: install frontend dependencies
+        run: npm ci
+
+      - name: build and publish
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: ani-cli-web
+          tagName: ${{ github.ref_type == 'tag' && github.ref_name || 'v__VERSION__' }}
+          releaseName: 'AniRust v__VERSION__'
+          releaseBody: |
+            Download the installer for your platform from the **Assets** section below.
+
+            | Platform | File |
+            | --- | --- |
+            | macOS (Apple Silicon) | `*_aarch64.dmg` |
+            | macOS (Intel) | `*_x64.dmg` |
+            | Windows | `*_x64-setup.exe` |
+            | Linux | `*_amd64.AppImage` / `*.deb` |
+
+            > Note: playback shells out to `sh`, so Windows builds require a POSIX shell (e.g. Git Bash) on `PATH`.
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}
