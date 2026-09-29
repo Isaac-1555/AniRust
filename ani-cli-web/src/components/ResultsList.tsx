@@ -22,8 +22,8 @@ export function ResultsList() {
     return (
       <div className="flex flex-1 items-center justify-center rounded-3xl border border-dashed border-white/10 bg-white/[0.03] p-10 text-neutral-500">
         <div className="text-center">
-          <p className="mb-2 text-xl font-semibold text-neutral-300">Search for anime</p>
-          <p className="text-sm">Type a title to find anime to watch.</p>
+          <p className="mb-2 text-xl font-semibold text-neutral-300">Search</p>
+          <p className="text-sm">Type a title to start.</p>
         </div>
       </div>
     );
@@ -31,7 +31,7 @@ export function ResultsList() {
 
   if (showSkeleton && searchResults.length === 0) {
     return (
-      <div className="min-h-0 flex-1 overflow-hidden rounded-3xl border border-white/10 bg-black/20 p-3 shadow-2xl shadow-black/20 backdrop-blur">
+      <div className="min-h-0 flex-1 overflow-hidden rounded-3xl border border-white/10 bg-surface/55 p-3 shadow-2xl shadow-black/20 backdrop-blur">
         <div className="grid gap-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
@@ -83,7 +83,7 @@ export function ResultsList() {
   };
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto rounded-3xl border border-white/10 bg-black/20 p-3 shadow-2xl shadow-black/20 backdrop-blur">
+    <div className="min-h-0 flex-1 overflow-y-auto rounded-3xl border border-white/10 bg-surface/55 p-3 shadow-2xl shadow-black/20 backdrop-blur">
       <div className="mb-3 flex items-center justify-between px-2 text-sm text-neutral-400">
         <span>{searchResults.length} result{searchResults.length === 1 ? '' : 's'}</span>
         <span className="hidden sm:inline">Arrow keys to move · Enter to open</span>
@@ -98,12 +98,12 @@ export function ResultsList() {
             onMouseEnter={() => setActiveIndex(index)}
             className={`group w-full rounded-2xl border p-4 text-left transition-all ${
               selectedResult?.id === result.id || activeIndex === index
-                ? 'border-orange-400 bg-orange-500/20 text-white shadow-lg shadow-orange-950/30'
-                : 'border-white/10 bg-white/[0.04] text-neutral-200 hover:border-orange-400/50 hover:bg-white/[0.08]'
+                ? 'border-primary bg-primary/20 text-white shadow-lg shadow-primary/20'
+                : 'border-white/10 bg-white/[0.04] text-neutral-200 hover:border-primary/50 hover:bg-white/[0.08]'
             }`}
           >
             <div className="flex items-center gap-3">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-neutral-950 text-sm font-semibold text-neutral-400 ring-1 ring-white/10 group-hover:text-orange-200">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-background text-sm font-semibold text-neutral-400 ring-1 ring-white/10 group-hover:text-accent">
                 {result.index}
               </span>
               <div className="min-w-0">

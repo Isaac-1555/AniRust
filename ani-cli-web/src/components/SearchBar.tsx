@@ -81,13 +81,13 @@ export function SearchBar() {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search anime title..."
+          placeholder="Search anime"
           aria-label="Search anime title"
-          className="w-full rounded-xl border border-transparent bg-neutral-950/80 py-4 pl-12 pr-14 text-base text-white placeholder-neutral-500 outline-none transition-all focus:border-orange-400 focus:ring-2 focus:ring-orange-500/25 sm:text-lg"
+          className="w-full rounded-xl border border-transparent bg-background/80 py-4 pl-12 pr-14 text-base text-white placeholder-neutral-500 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/25 sm:text-lg"
         />
         {isSearching && (
           <div className="absolute right-6 top-1/2 -translate-y-1/2">
-            <div className="w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+            <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           </div>
         )}
       </div>

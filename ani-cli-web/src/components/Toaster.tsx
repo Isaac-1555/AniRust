@@ -3,7 +3,7 @@ import { useToastStore, type ToastType } from '../lib/toast';
 const styles: Record<ToastType, string> = {
   success: 'border-emerald-400/30 bg-emerald-500/15 text-emerald-100',
   error: 'border-red-400/30 bg-red-500/15 text-red-100',
-  info: 'border-white/15 bg-white/10 text-neutral-100',
+  info: 'border-highlight/30 bg-highlight/15 text-highlight',
 };
 
 export function Toaster() {

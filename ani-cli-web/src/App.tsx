@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
+import { AppBackground } from './components/AppBackground';
 import { Header } from './components/Header';
 import { SearchBar } from './components/SearchBar';
 import { ResultsList } from './components/ResultsList';
@@ -14,13 +15,13 @@ function Home() {
   const { selectedResult } = useAppStore();
 
   return (
-    <div className="flex min-h-screen flex-col text-neutral-100">
+    <div className="relative z-10 flex min-h-screen flex-col text-text">
       <Header />
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-5 py-8 sm:px-8">
         <div className="mx-auto w-full max-w-3xl text-center">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.35em] text-orange-300">Stream finder</p>
-          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-5xl">Find anime without leaving the app.</h1>
-          <p className="mt-3 text-sm text-neutral-400 sm:text-base">Search, choose an episode, and watch the stream right inside Anickie.</p>
+          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.35em] text-highlight">Desktop anime player</p>
+          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-5xl">Watch anime. Nothing else in the way.</h1>
+          <p className="mt-3 text-sm text-neutral-400 sm:text-base">Search, pick an episode, play. Sub or dub.</p>
         </div>
         <SearchBar />
         <ResultsList />
@@ -39,6 +40,7 @@ function App() {
 
   return (
     <HashRouter>
+      <AppBackground />
       <CliStatus />
       <Routes>
         <Route path="/" element={<Home />} />

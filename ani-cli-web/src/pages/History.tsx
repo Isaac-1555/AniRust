@@ -42,12 +42,12 @@ export function History() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col text-neutral-100">
+    <div className="relative z-10 flex min-h-screen flex-col text-text">
       <Header />
       <main className="mx-auto w-full max-w-4xl flex-1 px-5 py-8 sm:px-8">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-white">History</h1>
+            <h1 className="text-2xl font-bold text-white">Continue watching</h1>
             <p className="mt-1 text-sm text-neutral-400">Pick up where you left off.</p>
           </div>
           {history.length > 0 && (
@@ -70,7 +70,7 @@ export function History() {
             {history.map((item) => (
               <div
                 key={item.id}
-                className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4 transition-colors hover:bg-white/[0.07]"
+                className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-surface/60 p-4 transition-colors hover:bg-surface/80"
               >
                 <div className="min-w-0">
                   <p className="truncate font-semibold text-white">{item.title}</p>
@@ -83,7 +83,7 @@ export function History() {
                   <button
                     onClick={() => void handleResume(item)}
                     disabled={resumingId === item.id}
-                    className="rounded-xl bg-orange-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-orange-500 disabled:opacity-50"
+                    className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent disabled:opacity-50"
                   >
                     {resumingId === item.id ? 'Loading...' : 'Resume'}
                   </button>

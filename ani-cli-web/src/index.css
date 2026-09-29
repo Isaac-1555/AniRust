@@ -1,14 +1,23 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
+@theme {
+  --color-background: #0c0d10;
+  --color-surface: #181a20;
+  --color-text: #f4f4f5;
+  --color-primary: #d97706;
+  --color-accent: #f59e0b;
+  --color-highlight: #8b5cf6;
+}
+
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
   color-scheme: dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #1a1a1a;
+  color: var(--color-text);
+  background-color: var(--color-background);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -20,8 +29,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: radial-gradient(circle at top, #2a2118 0%, #14110e 40%, #050505 100%);
-  background-attachment: fixed;
+  background-color: var(--color-background);
 }
 
 #root {
@@ -39,14 +47,14 @@ input, button, select {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1a1a1a;
+  background: var(--color-background);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #404040;
+  background: #2a2d36;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #525252;
+  background: #3a3e49;
 }

@@ -112,7 +112,7 @@ export function DetailPanel() {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md" onClick={() => setSelectedResult(null)}>
       <div
-        className="w-full max-w-md rounded-3xl border border-white/10 bg-neutral-950/95 p-6 shadow-2xl shadow-black"
+        className="w-full max-w-md rounded-3xl border border-white/10 bg-surface/95 p-6 shadow-2xl shadow-black"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between mb-4">
@@ -148,7 +148,7 @@ export function DetailPanel() {
                       onClick={() => setEpisode(value)}
                       className={`rounded-lg py-2 text-sm font-medium transition-colors ${
                         episode === value
-                          ? 'bg-orange-600 text-white'
+                          ? 'bg-primary text-white'
                           : 'bg-white/[0.04] text-neutral-300 hover:bg-white/[0.1]'
                       }`}
                     >
@@ -164,7 +164,7 @@ export function DetailPanel() {
                   min="1"
                   value={episode}
                   onChange={(e) => setEpisode(Math.max(1, Number.parseInt(e.target.value, 10) || 1))}
-                  className="w-full rounded-xl border border-white/10 bg-white/[0.06] px-3 py-3 text-white outline-none transition-all focus:border-orange-400 focus:ring-2 focus:ring-orange-500/25"
+                  className="w-full rounded-xl border border-white/10 bg-white/[0.06] px-3 py-3 text-white outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/25"
                 />
                 {episodesError && (
                   <p className="mt-2 text-xs text-amber-300/80">{episodesError}. Enter an episode manually.</p>
@@ -178,7 +178,7 @@ export function DetailPanel() {
             <select
               value={quality}
               onChange={(e) => setQuality(e.target.value)}
-              className="w-full cursor-pointer rounded-xl border border-white/10 bg-white/[0.06] px-3 py-3 text-white outline-none transition-all focus:border-orange-400 focus:ring-2 focus:ring-orange-500/25"
+              className="w-full cursor-pointer rounded-xl border border-white/10 bg-white/[0.06] px-3 py-3 text-white outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/25"
             >
               {QUALITIES.map((option) => (
                 <option key={option.value} value={option.value} className="bg-neutral-900">
@@ -198,7 +198,7 @@ export function DetailPanel() {
                   onClick={() => setMode(value)}
                   className={`flex-1 px-4 py-2.5 rounded-lg font-medium capitalize transition-all ${
                     mode === value
-                      ? 'bg-orange-600 text-white shadow-lg shadow-orange-950/30'
+                      ? 'bg-primary text-white shadow-lg shadow-primary/20'
                       : 'bg-white/[0.06] text-neutral-300 hover:bg-white/[0.1]'
                   }`}
                 >
@@ -219,7 +219,7 @@ export function DetailPanel() {
           <button
             onClick={handlePlay}
             disabled={isPlaying}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 py-3 font-semibold text-white transition-all hover:bg-orange-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 font-semibold text-white transition-all hover:bg-accent active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isPlaying ? (
               <>

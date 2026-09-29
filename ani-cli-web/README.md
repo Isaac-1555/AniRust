@@ -1,8 +1,8 @@
-# Anickie
+# AniRust
 
 A fast desktop GUI for [`ani-cli`](https://github.com/pystardust/ani-cli), built with
-Tauri 2 (Rust) + React. Search anime, pick an episode, and watch the stream directly
-inside the app — no terminal pickers, no external player required.
+Tauri 2 (Rust) + React. Search anime, pick an episode, watch the stream directly
+inside the app — no terminal pickers, no external player.
 
 ## Features
 
