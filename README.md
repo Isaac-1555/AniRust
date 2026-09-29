@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Isaac-1555/Anickie/releases/latest"><b>⬇ Download the latest release</b></a>
+  <a href="https://github.com/Isaac-1555/AniRust/releases/latest"><b>⬇ Download the latest release</b></a>
 </p>
 
 ---
@@ -17,7 +17,7 @@
 ## Download
 
 Grab the installer for your platform from the
-[**Releases page**](https://github.com/Isaac-1555/Anickie/releases/latest).
+[**Releases page**](https://github.com/Isaac-1555/AniRust/releases/latest).
 
 | Platform | File | Notes |
 | --- | --- | --- |
